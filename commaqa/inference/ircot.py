@@ -271,8 +271,15 @@ class RetrieveAndResetParagraphsParticipant(ParticipantModel):
         global_max_num_paras=100,
         next_model=None,
         end_state="[EOQ]",
+        retriever_name=None,
     ):
-
+        if retrieval_type == "hf":
+            self.real_retrieval_type = "hf"
+            retrieval_type = "bm25"
+            self.retriever_name = retriever_name
+            # TODO replace the return 
+            from .hf_retrieval import get_hf_retriever
+            self.retriever = get_hf_retriever(retriever_name, source_corpus_name)
         assert retrieval_type in (
             "map_generated_to_valid_titles",
             "bm25",
@@ -382,8 +389,11 @@ class RetrieveAndResetParagraphsParticipant(ParticipantModel):
                     "document_type": "title",
                     "corpus_name": self.source_corpus_name,
                 }
-                url = self.retriever_host.rstrip("/") + ":" + str(self.retriever_port) + "/retrieve"
-                result = safe_post_request(url, params)
+                if hasattr(self, "retriever"):
+                    result = self.retriever("", params)
+                else:
+                    url = self.retriever_host.rstrip("/") + ":" + str(self.retriever_port) + "/retrieve"
+                    result = safe_post_request(url, params)
 
                 locally_mapped_titles = set()
                 if result.ok:
@@ -455,8 +465,11 @@ class RetrieveAndResetParagraphsParticipant(ParticipantModel):
                 if self.valid_titles_are_allowed_titles:
                     params["allowed_titles"] = state.data["valid_titles"]
 
-                url = self.retriever_host.rstrip("/") + ":" + str(self.retriever_port) + "/retrieve"
-                result = safe_post_request(url, params)
+                if hasattr(self, "retriever"):
+                    result = self.retriever("", params)
+                else:
+                    url = self.retriever_host.rstrip("/") + ":" + str(self.retriever_port) + "/retrieve"
+                    result = safe_post_request(url, params)
 
                 if result.ok:
 
@@ -755,6 +768,9 @@ class StepByStepCOTGenParticipant(ParticipantModel):
             self.generator = GPT3Generator(**kwargs)
         elif gen_model == "llm_api":
             self.generator = LLMClientGenerator(**kwargs)
+        elif gen_model == "openai":
+            from ..models.openai_generator import OpenAIGenerator
+            self.generator = OpenAIGenerator(**kwargs)
         else:
             raise ValueError("Unknown gen_model: " + gen_model)
 

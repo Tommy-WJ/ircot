@@ -20,6 +20,9 @@ class LLMQAModel:
             self.generator = GPT3Generator(**kwargs)
         elif gen_model == "llm_api":
             self.generator = LLMClientGenerator(**kwargs)
+        elif gen_model == "openai":
+            from ..models.openai_generator import OpenAIGenerator
+            self.generator = OpenAIGenerator(**kwargs)
         else:
             raise ValueError("Unknown gen_model: " + gen_model)
 
