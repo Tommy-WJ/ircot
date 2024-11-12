@@ -22,7 +22,10 @@ local prompt_reader_args = {
 # null means it's unused.
 local llm_retrieval_count = null;
 local llm_map_count = null;
-local bm25_retrieval_count = 6;
+local openai_url = "http://localhost:5691/v1";
+local retriever_name = "GritLM/GritLM-7B";
+local llm_engine = "meta-llama/Llama-3.1-8B-Instruct";
+local retrieval_count = 6;
 local rc_context_type_ = "gold_with_n_distractors"; # Choices: no, gold, gold_with_n_distractors
 local distractor_count = "2"; # Choices: 1, 2, 3
 local rc_context_type = (
@@ -35,16 +38,15 @@ local multi_step_show_cot = null;
 local rc_qa_type = "cot"; # Choices: direct, cot
 
 {
-    "start_state": "step_by_step_bm25_retriever",
+    "start_state": "step_by_step_hf_retriever",
     "end_state": "[EOQ]",
     "models": {
-        "step_by_step_bm25_retriever": {
+        "step_by_step_hf_retriever": {
             "name": "retrieve_and_reset_paragraphs",
             "next_model": "step_by_step_cot_reasoning_gen",
-            "retrieval_type": "bm25",
-            "retriever_host": std.extVar("RETRIEVER_HOST"),
-            "retriever_port": std.extVar("RETRIEVER_PORT"),
-            "retrieval_count": bm25_retrieval_count,
+            "retrieval_type": "hf",
+            "retrieval_count": retrieval_count,
+            "retriever_name": retriever_name,
             "global_max_num_paras": 15,
             "query_source": "question_or_last_generated_sentence",
             "source_corpus_name": retrieval_corpus_name,
@@ -65,13 +67,14 @@ local rc_qa_type = "cot"; # Choices: direct, cot
             "terminal_return_type": null,
             "disable_exit": true,
             "end_state": "[EOQ]",
-            "gen_model": "gpt3",
-            "engine": "code-davinci-002",
+            "gen_model": "openai",
+            "engine": llm_engine,
+            "base_url": openai_url,
             "retry_after_n_seconds": 50,
         },
         "step_by_step_exit_controller": {
             "name": "step_by_step_exit_controller",
-            "next_model": "step_by_step_bm25_retriever",
+            "next_model": "step_by_step_hf_retriever",
             "answer_extractor_regex": ".* answer is:? (.*)\\.?",
             "answer_extractor_remove_last_fullstop": true,
             "terminal_state_next_model": "generate_main_question",
@@ -91,9 +94,9 @@ local rc_qa_type = "cot"; # Choices: direct, cot
             "prompt_file": "prompts/"+dataset+"/"+rc_context_type+"_context_"+rc_qa_type+"_qa_codex.txt",
             "prompt_reader_args": prompt_reader_args,
             "end_state": "[EOQ]",
-            "gen_model": "gpt3",
-            "engine": "code-davinci-002",
-            "retry_after_n_seconds": 50,
+            "gen_model": "openai",
+            "engine": llm_engine,
+            "base_url": openai_url,
             "add_context": true,
         },
         "extract_answer": {
